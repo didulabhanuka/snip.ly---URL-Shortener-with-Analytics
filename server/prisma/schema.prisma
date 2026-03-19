@@ -1,13 +1,48 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+  urls      Url[]
+
+  @@map("users")
+}
+
+model Url {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  originalUrl String   @map("original_url")
+  userId      String?  @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clicks      Click[]
+
+  @@index([slug])
+  @@index([userId])
+  @@map("urls")
+}
+
+model Click {
+  id        String   @id @default(uuid())
+  urlId     String   @map("url_id")
+  clickedAt DateTime @default(now()) @map("clicked_at")
+  ip        String?
+  country   String?
+  referrer  String?
+  browser   String?
+  os        String?
+  device    String?
+  url       Url      @relation(fields: [urlId], references: [id], onDelete: Cascade)
+
+  @@index([urlId])
+  @@index([clickedAt])
+  @@map("clicks")
 }
