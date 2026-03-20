@@ -1,81 +1,136 @@
-# ⚡ snip.ly — URL Shortener with Analytics
+<div align="center">
 
-A full-stack URL shortener with real-time click analytics, password-protected links, and an admin panel. Built with Node/Express, PostgreSQL, Redis, and React.
+# ⚡ snip.ly
+
+### URL shortener with real-time analytics
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://postgresql.org)
+[![Redis](https://img.shields.io/badge/Redis-7+-red.svg)](https://redis.io)
+
+**[Report a Bug](https://github.com/didulabhanuka/snip.ly---URL-Shortener-with-Analytics/issues) · [Request a Feature](https://github.com/didulabhanuka/snip.ly---URL-Shortener-with-Analytics/issues)**
+
+</div>
+
+---
+
+## What is snip.ly?
+
+snip.ly turns long URLs into short, trackable links. Every click is captured asynchronously — geo-located, device-parsed, and stored — without ever slowing down the redirect. The analytics dashboard gives you a real-time breakdown of who's clicking, from where, on what device, and how they found you.
+
+Built as a portfolio project demonstrating production patterns: async job processing, Redis caching, JWT auth, role-based access control, and a clean React frontend.
+
+---
 
 ## Features
 
-- **Link shortening** — generate a 6-char nanoid slug or set a custom one
-- **Password-protected links** — lock any link behind a password gate
-- **Instant redirects** — DB-first lookup with Redis cache warming keeps redirects fast
-- **Async click capture** — analytics never block the redirect path
-- **Per-click analytics** — country (via geoip-lite), browser/OS/device (via ua-parser-js), referrer
-- **Dashboard** — clicks over time, device split, top referrers, top country
-- **JWT auth** — users only see and manage their own links
-- **Admin panel** — platform-wide stats, manage all users and links, promote/demote roles
-- **Rate limiting** — 30 req/15min on shorten, 10 req/15min on auth
+| | Feature | Details |
+|---|---|---|
+| 🔗 | **Link shortening** | 6-char nanoid slug or custom alias |
+| 🔒 | **Password protection** | Bcrypt-hashed gate on any link |
+| ⚡ | **Fast redirects** | DB-first with Redis cache warming |
+| 📊 | **Click analytics** | Country, browser, device, referrer per click |
+| 📈 | **Dashboard** | Clicks over time, device split, top referrers |
+| 🔑 | **Admin panel** | Platform stats, manage all users and links |
+| 🛡️ | **Rate limiting** | Per-endpoint limits to prevent abuse |
+| 🔐 | **JWT auth** | Stateless auth, role-based access (user / admin) |
+
+---
+
+## Architecture
+
+```
+┌─────────────┐     ┌──────────────────────────────────────┐
+│ React + Vite│────▶│           Express API                 │
+│  (Vite 5)   │     │                                       │
+└─────────────┘     │  /api/auth      JWT register/login    │
+                    │  /api/shorten   Create & list links   │
+                    │  /api/analytics Per-link stats         │
+                    │  /api/admin     Admin operations       │
+                    │  /:slug         Redirect endpoint      │
+                    └──────────┬───────────────┬────────────┘
+                               │               │
+                    ┌──────────▼───┐   ┌───────▼────────┐
+                    │  PostgreSQL  │   │     Redis       │
+                    │  (Prisma 7)  │   │  (slug cache)   │
+                    └──────────────┘   └────────────────┘
+```
+
+### Redirect flow
+
+```
+GET /:slug
+    │
+    ▼
+DB lookup → has password?
+    │
+    ├─── YES ──▶ 302 → /p/:slug (password gate page)
+    │
+    └─── NO ───▶ Redis hit? ──YES──▶ 302 redirect
+                     │                    │
+                    NO                 [async]
+                     │              capture click
+                     ▼            (geo + UA + referrer)
+               warm Redis
+                     │
+                     ▼
+               302 redirect
+```
+
+> The async click capture never blocks the redirect. Protected links always hit the DB so the password check cannot be bypassed via cache.
+
+---
 
 ## Tech Stack
 
-| Layer | Tech |
+| Layer | Technology |
 |---|---|
-| Backend | Node.js, Express |
-| Database | PostgreSQL + Prisma ORM (v7) |
-| Cache | Redis (ioredis) |
-| Auth | JWT + bcryptjs |
-| Analytics | geoip-lite, ua-parser-js |
-| Frontend | React + Vite |
-| Charts | Chart.js + react-chartjs-2 |
+| **Runtime** | Node.js 18+ |
+| **Framework** | Express 4 |
+| **Database** | PostgreSQL 15 + Prisma ORM v7 |
+| **Cache** | Redis 7 (ioredis) |
+| **Auth** | JWT (jsonwebtoken) + bcryptjs |
+| **Analytics** | geoip-lite · ua-parser-js |
+| **Frontend** | React 18 + Vite 5 |
+| **Charts** | Chart.js + react-chartjs-2 |
+| **Styling** | Plain CSS with CSS variables |
 
-## Project Structure
-
-```
-url-shortener/
-├── server/
-│   ├── src/
-│   │   ├── routes/         # shorten.js, redirect.js, analytics.js, auth.js, admin.js
-│   │   ├── services/       # redis.js, geo.js, clickWorker.js
-│   │   ├── db/             # schema.sql, client.js
-│   │   └── middleware/     # auth.js, rateLimiter.js, errorHandler.js, requireAdmin.js
-│   ├── prisma/
-│   │   └── schema.prisma
-│   └── prisma.config.ts
-├── client/
-│   └── src/
-│       ├── pages/          # Dashboard.jsx, LinkDetail.jsx, Login.jsx, PasswordGate.jsx, Admin.jsx
-│       ├── components/     # LinkForm.jsx, StatsChart.jsx, LinkTable.jsx, Navbar.jsx
-│       ├── hooks/          # useLinks.js, useAuth.js, useDashboard.js
-│       └── lib/            # api.js, utils.js
-└── .github/workflows/ci.yml
-```
+---
 
 ## Getting Started
 
-**Prerequisites:** Node 18+, PostgreSQL, Redis
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL 15+
+- Redis 7+ (optional — app runs without it, cache disabled)
+
+### Installation
 
 ```bash
-# 1. Clone
+# 1. Clone the repo
 git clone https://github.com/didulabhanuka/snip.ly---URL-Shortener-with-Analytics
 cd snip.ly---URL-Shortener-with-Analytics
 
-# 2. Server
+# 2. Set up the server
 cd server
-cp .env.example .env        # fill in values below
+cp .env.example .env       # edit with your values
 npm install
-npx prisma db push
-npx prisma generate
-npm run dev
+npx prisma db push         # create tables
+npx prisma generate        # generate Prisma client
+npm run dev                # starts on :3000
 
-# 3. Client (new terminal)
+# 3. Set up the client (new terminal)
 cd client
-cp .env.example .env        # set VITE_API_URL=http://localhost:3000
+cp .env.example .env       # set VITE_API_URL=http://localhost:3000
 npm install
-npm run dev
+npm run dev                # starts on :5173
 ```
 
-## Environment Variables
+### Environment Variables
 
-### server/.env
-
+**`server/.env`**
 ```env
 NODE_ENV=development
 PORT=3000
@@ -86,85 +141,151 @@ BASE_URL=http://localhost:3000
 CLIENT_ORIGIN=http://localhost:5173
 ```
 
-### client/.env
-
+**`client/.env`**
 ```env
 VITE_API_URL=http://localhost:3000
 ```
 
-## Admin Setup
+### Promoting to Admin
 
-After registering your account, promote it to admin via SQL:
+After registering, run this once in psql:
 
 ```sql
 UPDATE users SET role = 'admin' WHERE email = 'your@email.com';
 ```
 
-Then log out and back in — the `🔑 Admin` link will appear in the navbar.
+Then log out and back in. The `🔑 Admin` link will appear in the navbar.
+
+---
 
 ## API Reference
 
-### Auth
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Create account |
-| POST | `/api/auth/login` | Login, returns JWT |
+<details>
+<summary><strong>Auth</strong></summary>
 
-### Links
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/shorten` | Create short link (optional password) |
-| GET | `/api/shorten` | List user's links |
-| DELETE | `/api/shorten/:id` | Delete a link |
-| GET | `/:slug` | Redirect + capture click |
-| POST | `/api/verify/:slug` | Verify password for protected link |
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/register` | — | Create account |
+| POST | `/api/auth/login` | — | Login, returns JWT |
 
-### Analytics
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/analytics/overview` | Dashboard summary |
-| GET | `/api/analytics/:urlId` | Per-link breakdown |
+</details>
 
-### Admin
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/admin/stats` | Platform-wide stats |
-| GET | `/api/admin/users` | List all users |
-| DELETE | `/api/admin/users/:id` | Delete a user |
-| PATCH | `/api/admin/users/:id/role` | Promote / demote user |
-| GET | `/api/admin/links` | List all links |
-| DELETE | `/api/admin/links/:id` | Delete any link |
+<details>
+<summary><strong>Links</strong></summary>
 
-## How the Redirect Works
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/shorten` | ✅ | Create short link (optional password) |
+| GET | `/api/shorten` | ✅ | List your links |
+| DELETE | `/api/shorten/:id` | ✅ | Delete a link |
+| GET | `/:slug` | — | Redirect + capture click |
+| POST | `/api/verify/:slug` | — | Unlock a password-protected link |
+
+</details>
+
+<details>
+<summary><strong>Analytics</strong></summary>
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/analytics/overview` | ✅ | Dashboard summary |
+| GET | `/api/analytics/:urlId` | ✅ | Per-link breakdown |
+
+</details>
+
+<details>
+<summary><strong>Admin</strong></summary>
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/admin/stats` | 🔑 Admin | Platform-wide stats |
+| GET | `/api/admin/users` | 🔑 Admin | All users |
+| DELETE | `/api/admin/users/:id` | 🔑 Admin | Delete a user |
+| PATCH | `/api/admin/users/:id/role` | 🔑 Admin | Promote / demote |
+| GET | `/api/admin/links` | 🔑 Admin | All links |
+| DELETE | `/api/admin/links/:id` | 🔑 Admin | Delete any link |
+
+</details>
+
+---
+
+## Project Structure
 
 ```
-GET /:slug
-    │
-    ▼
-DB lookup — check passwordHash
-    │
-    ├── protected ──▶ redirect to /p/:slug (password gate)
-    │
-    └── public ──▶ check Redis cache ──hit──▶ 302 redirect
-                        │                           │
-                       miss                      async
-                        │                           ▼
-                        ▼                     capture click
-                   warm cache                (geo + UA + referrer)
-                        │
-                        ▼
-                   302 redirect
+├── server/
+│   ├── prisma/
+│   │   ├── schema.prisma          # DB models
+│   │   └── prisma.config.ts       # Prisma 7 config
+│   └── src/
+│       ├── routes/
+│       │   ├── auth.js            # Register, login
+│       │   ├── shorten.js         # Create, list, delete links
+│       │   ├── redirect.js        # Slug redirect + verify
+│       │   ├── analytics.js       # Overview + per-link stats
+│       │   └── admin.js           # Admin operations
+│       ├── services/
+│       │   ├── redis.js           # Cache helpers
+│       │   ├── geo.js             # IP → country, UA → device
+│       │   └── clickWorker.js     # Async click capture
+│       ├── middleware/
+│       │   ├── auth.js            # JWT verification
+│       │   ├── requireAdmin.js    # Role guard
+│       │   ├── rateLimiter.js     # Per-route limits
+│       │   └── errorHandler.js    # Global error handler
+│       ├── db/
+│       │   ├── schema.sql         # Raw DDL
+│       │   └── client.js          # Prisma client singleton
+│       ├── app.js                 # Express app setup
+│       └── index.js               # Server entry point
+│
+└── client/
+    └── src/
+        ├── pages/
+        │   ├── Dashboard.jsx      # Main analytics dashboard
+        │   ├── LinkDetail.jsx     # Per-link stats
+        │   ├── Login.jsx          # Auth page
+        │   ├── PasswordGate.jsx   # Password unlock page
+        │   └── Admin.jsx          # Admin panel
+        ├── components/
+        │   ├── LinkForm.jsx       # URL + options form
+        │   ├── LinkTable.jsx      # Links list
+        │   ├── StatsChart.jsx     # Chart.js wrappers
+        │   └── Navbar.jsx         # Top navigation
+        ├── hooks/
+        │   ├── useAuth.js         # Login, register, logout
+        │   ├── useLinks.js        # Link CRUD
+        │   └── useDashboard.js    # Overview stats
+        └── lib/
+            ├── api.js             # Axios instance + interceptors
+            └── utils.js           # Date, truncate, clipboard helpers
 ```
 
-The async click capture never blocks the redirect. Protected links always hit the DB first so the password hash check cannot be bypassed via the cache.
+---
 
-## Running Tests
+## Contributing
 
-```bash
-cd server
-npm test
-```
+Contributions are welcome! Please open an issue first to discuss what you'd like to change.
+
+1. Fork the repo
+2. Create your branch (`git checkout -b feature/your-feature`)
+3. Commit your changes (`git commit -m 'Add your feature'`)
+4. Push to the branch (`git push origin feature/your-feature`)
+5. Open a Pull Request
+
+---
+
+## Security
+
+If you discover a security vulnerability, please open a [GitHub issue](https://github.com/didulabhanuka/snip.ly---URL-Shortener-with-Analytics/issues) marked as **security**. Do not post credentials or sensitive data publicly.
+
+---
 
 ## License
 
-MIT
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+<div align="center">
+Made with ☕ by <a href="https://github.com/didulabhanuka">didulabhanuka</a>
+</div>
