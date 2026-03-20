@@ -13,18 +13,17 @@ export function useLinks() {
       const { data } = await api.get('/api/shorten')
       setLinks(data)
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load links')
+      const msg = err?.response?.data?.error || err?.message || 'Failed to load links'
+      setError(String(msg))
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => {
-    fetchLinks()
-  }, [fetchLinks])
+  useEffect(() => { fetchLinks() }, [fetchLinks])
 
-  const createLink = useCallback(async (url, customSlug) => {
-    const { data } = await api.post('/api/shorten', { url, customSlug })
+  const createLink = useCallback(async (url, customSlug, password) => {
+    const { data } = await api.post('/api/shorten', { url, customSlug, password })
     setLinks((prev) => [{ ...data, clicks: 0, createdAt: new Date() }, ...prev])
     return data
   }, [])

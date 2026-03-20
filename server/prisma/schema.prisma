@@ -17,13 +17,14 @@ model User {
 }
 
 model Url {
-  id          String   @id @default(uuid())
-  slug        String   @unique
-  originalUrl String   @map("original_url")
-  userId      String?  @map("user_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clicks      Click[]
+  id           String   @id @default(uuid())
+  slug         String   @unique
+  originalUrl  String   @map("original_url")
+  userId       String?  @map("user_id")
+  passwordHash String?  @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clicks       Click[]
 
   @@index([slug])
   @@index([userId])

@@ -4,6 +4,7 @@ import Navbar from './components/Navbar'
 import Dashboard from './pages/Dashboard'
 import LinkDetail from './pages/LinkDetail'
 import Login from './pages/Login'
+import PasswordGate from './pages/PasswordGate'
 
 function PrivateRoute({ children }) {
   const { token } = useAuth()
@@ -17,6 +18,7 @@ export default function App() {
       <main className="container">
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/p/:slug" element={<PasswordGate />} />
           <Route
             path="/"
             element={

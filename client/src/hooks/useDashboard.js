@@ -13,7 +13,8 @@ export function useDashboard() {
       const { data: res } = await api.get('/api/analytics/overview')
       setData(res)
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load dashboard data')
+      const msg = err?.response?.data?.error || err?.message || 'Failed to load dashboard data'
+      setError(String(msg))
     } finally {
       setLoading(false)
     }

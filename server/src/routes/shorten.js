@@ -1,5 +1,6 @@
 const express = require('express')
 const { nanoid } = require('nanoid')
+const bcrypt = require('bcryptjs')
 const prisma = require('../db/client')
 const { cacheSlug } = require('../services/redis')
 const { authenticate } = require('../middleware/auth')
@@ -19,7 +20,7 @@ function isValidUrl(str) {
 // POST /api/shorten
 router.post('/', shortenLimiter, authenticate, async (req, res, next) => {
   try {
-    const { url, customSlug } = req.body
+    const { url, customSlug, password } = req.body
 
     if (!url || !isValidUrl(url)) {
       return res.status(400).json({ error: 'A valid URL is required' })
@@ -34,19 +35,29 @@ router.post('/', shortenLimiter, authenticate, async (req, res, next) => {
       }
     }
 
+    const passwordHash = password ? await bcrypt.hash(password, 10) : null
+
     const record = await prisma.url.create({
       data: {
         slug,
         originalUrl: url,
-        userId: req.user.userId,
+        passwordHash,
+        user: { connect: { id: req.user.userId } },
       },
     })
 
-    // Cache the slug immediately so the first redirect is fast
-    await cacheSlug(slug, url)
+    if (!passwordHash) {
+      await cacheSlug(slug, url)
+    }
 
     const shortUrl = `${process.env.BASE_URL}/${slug}`
-    res.status(201).json({ shortUrl, slug, originalUrl: url, id: record.id })
+    res.status(201).json({
+      shortUrl,
+      slug,
+      originalUrl: url,
+      id: record.id,
+      protected: !!passwordHash,
+    })
   } catch (err) {
     next(err)
   }
@@ -56,7 +67,7 @@ router.post('/', shortenLimiter, authenticate, async (req, res, next) => {
 router.get('/', authenticate, async (req, res, next) => {
   try {
     const urls = await prisma.url.findMany({
-      where: { userId: req.user.userId },
+      where: { user: { id: req.user.userId } },
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { clicks: true } } },
     })
@@ -69,6 +80,7 @@ router.get('/', authenticate, async (req, res, next) => {
         shortUrl: `${process.env.BASE_URL}/${u.slug}`,
         clicks: u._count.clicks,
         createdAt: u.createdAt,
+        protected: !!u.passwordHash,
       }))
     )
   } catch (err) {
@@ -80,7 +92,7 @@ router.get('/', authenticate, async (req, res, next) => {
 router.delete('/:id', authenticate, async (req, res, next) => {
   try {
     const url = await prisma.url.findFirst({
-      where: { id: req.params.id, userId: req.user.userId },
+      where: { id: req.params.id, user: { id: req.user.userId } },
     })
 
     if (!url) return res.status(404).json({ error: 'Link not found' })

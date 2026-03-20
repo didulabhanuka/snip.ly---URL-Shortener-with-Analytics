@@ -10,7 +10,7 @@ router.get('/overview', authenticate, async (req, res, next) => {
     const userId = req.user.userId
 
     const urls = await prisma.url.findMany({
-      where: { userId },
+      where: { user: { id: userId } },
       include: { _count: { select: { clicks: true } } },
     })
 
@@ -40,10 +40,10 @@ router.get('/overview', authenticate, async (req, res, next) => {
       if (key in clicksByDay) clicksByDay[key]++
     })
 
-    // Device breakdown (all time)
+    // All clicks for breakdowns
     const allClicks = await prisma.click.findMany({
       where: { urlId: { in: urlIds } },
-      select: { device: true, country: true, referrer: true },
+      select: { device: true, country: true, referrer: true, ip: true },
     })
 
     const byDevice = allClicks.reduce((acc, c) => {
@@ -52,33 +52,29 @@ router.get('/overview', authenticate, async (req, res, next) => {
       return acc
     }, {})
 
-    // Top referrers
     const byReferrer = allClicks.reduce((acc, c) => {
       const key = c.referrer || 'Direct'
       acc[key] = (acc[key] || 0) + 1
       return acc
     }, {})
 
-    // Top country
     const byCountry = allClicks.reduce((acc, c) => {
       const key = c.country || 'Unknown'
       acc[key] = (acc[key] || 0) + 1
       return acc
     }, {})
+
     const topCountry = Object.entries(byCountry).sort(([, a], [, b]) => b - a)[0]
 
-    // Unique IPs (approximate unique visitors)
-    const uniqueVisitors = await prisma.click.findMany({
-      where: { urlId: { in: urlIds } },
-      select: { ip: true },
-      distinct: ['ip'],
-    })
+    const uniqueIps = new Set(allClicks.map((c) => c.ip).filter(Boolean))
 
     res.json({
       totalClicks,
       activeLinks: urls.length,
-      uniqueVisitors: uniqueVisitors.length,
-      topCountry: topCountry ? { name: topCountry[0], pct: Math.round((topCountry[1] / allClicks.length) * 100) } : null,
+      uniqueVisitors: uniqueIps.size,
+      topCountry: topCountry
+        ? { name: topCountry[0], pct: Math.round((topCountry[1] / allClicks.length) * 100) }
+        : null,
       clicksByDay,
       byDevice,
       byReferrer: Object.entries(byReferrer)
@@ -95,7 +91,7 @@ router.get('/overview', authenticate, async (req, res, next) => {
 router.get('/:urlId', authenticate, async (req, res, next) => {
   try {
     const url = await prisma.url.findFirst({
-      where: { id: req.params.urlId, userId: req.user.userId },
+      where: { id: req.params.urlId, user: { id: req.user.userId } },
     })
     if (!url) return res.status(404).json({ error: 'Link not found' })
 

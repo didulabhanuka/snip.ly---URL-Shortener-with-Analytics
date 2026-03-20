@@ -28,8 +28,8 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [copied, setCopied] = useState(null)
 
-  async function handleCreate(url, customSlug) {
-    await createLink(url, customSlug)
+  async function handleCreate(url, customSlug, password) {
+    await createLink(url, customSlug, password)
     refetch() // refresh overview stats after new link
   }
 
