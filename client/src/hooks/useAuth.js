@@ -1,17 +1,20 @@
 import { useState, useCallback } from 'react'
 import api from '../lib/api'
 
+function decodeToken(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return { userId: payload.userId, email: payload.email, role: payload.role || 'user' }
+  } catch {
+    return null
+  }
+}
+
 export function useAuth() {
   const [token, setToken] = useState(() => localStorage.getItem('token'))
   const [user, setUser] = useState(() => {
-    try {
-      const t = localStorage.getItem('token')
-      if (!t) return null
-      const payload = JSON.parse(atob(t.split('.')[1]))
-      return { userId: payload.userId, email: payload.email }
-    } catch {
-      return null
-    }
+    const t = localStorage.getItem('token')
+    return t ? decodeToken(t) : null
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -23,7 +26,7 @@ export function useAuth() {
       const { data } = await api.post('/api/auth/login', { email, password })
       localStorage.setItem('token', data.token)
       setToken(data.token)
-      setUser(data.user)
+      setUser(decodeToken(data.token))
       return true
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed')
@@ -40,7 +43,7 @@ export function useAuth() {
       const { data } = await api.post('/api/auth/register', { email, password })
       localStorage.setItem('token', data.token)
       setToken(data.token)
-      setUser(data.user)
+      setUser(decodeToken(data.token))
       return true
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed')

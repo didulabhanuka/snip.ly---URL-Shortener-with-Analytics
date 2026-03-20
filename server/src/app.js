@@ -6,6 +6,7 @@ const authRoutes = require('./routes/auth')
 const shortenRoutes = require('./routes/shorten')
 const analyticsRoutes = require('./routes/analytics')
 const redirectRoutes = require('./routes/redirect')
+const adminRoutes = require('./routes/admin')
 const { errorHandler } = require('./middleware/errorHandler')
 
 const app = express()
@@ -33,6 +34,7 @@ app.use(express.json())
 app.use('/api/auth', authRoutes)
 app.use('/api/shorten', shortenRoutes)
 app.use('/api/analytics', analyticsRoutes)
+app.use('/api/admin', adminRoutes)
 
 // Must come last — catches /:slug
 app.use('/', redirectRoutes)

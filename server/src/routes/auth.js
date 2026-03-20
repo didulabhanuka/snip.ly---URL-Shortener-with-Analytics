@@ -25,12 +25,12 @@ router.post('/register', authLimiter, async (req, res, next) => {
     })
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
 
-    res.status(201).json({ token, user: { id: user.id, email: user.email } })
+    res.status(201).json({ token, user: { id: user.id, email: user.email, role: user.role } })
   } catch (err) {
     next(err)
   }
@@ -55,12 +55,12 @@ router.post('/login', authLimiter, async (req, res, next) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
 
-    res.json({ token, user: { id: user.id, email: user.email } })
+    res.json({ token, user: { id: user.id, email: user.email, role: user.role } })
   } catch (err) {
     next(err)
   }
