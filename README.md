@@ -11,7 +11,6 @@ A full-stack URL shortener with real-time click analytics, built with Node/Expre
 - **Dashboard** — clicks over time, device split, top referrers, top country
 - **JWT auth** — users only see and manage their own links
 - **Rate limiting** — 30 req/15min on shorten, 10 req/15min on auth
-- **Docker ready** — single `docker compose up` spins up Node + Postgres + Redis
 
 ## Tech Stack
 
@@ -24,7 +23,6 @@ A full-stack URL shortener with real-time click analytics, built with Node/Expre
 | Analytics | geoip-lite, ua-parser-js |
 | Frontend | React + Vite |
 | Charts | Chart.js + react-chartjs-2 |
-| Infra | Docker, docker-compose |
 
 ## Project Structure
 
@@ -51,24 +49,13 @@ url-shortener/
 
 ## Getting Started
 
-### With Docker (recommended)
-
-```bash
-git clone https://github.com/your-username/snip.ly
-cd snip.ly
-cp .env.example .env        # fill in JWT_SECRET and BASE_URL
-docker compose up --build
-```
-
-App runs at `http://localhost:5173`, API at `http://localhost:3000`.
-
 ### Manual setup
 
 **Prerequisites:** Node 18+, PostgreSQL, Redis
 
 ```bash
 # 1. Clone
-git clone https://github.com/your-username/snip.ly
+git clone https://github.com/didulabhanuka/URL-shortener
 cd snip.ly
 
 # 2. Server
